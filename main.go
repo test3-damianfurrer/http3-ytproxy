@@ -19,6 +19,8 @@ import (
 	"github.com/quic-go/quic-go/http3"
 )
 
+var env_reqip = ""
+
 // http/3 client
 var h3client = &http.Client{
 	Transport: &http3.RoundTripper{},
@@ -94,6 +96,7 @@ func (*requesthandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	q := req.URL.Query()
+	q.Set("ip", env_reqip)
 	host := q.Get("host")
 	q.Del("host")
 
@@ -304,6 +307,15 @@ func main() {
 
 	disable_ipv6 = os.Getenv("DISABLE_IPV6") == "1"
 	disable_webp = os.Getenv("DISABLE_WEBP") == "1"
+	env_port := os.Getenv("LISTEN_PORT")
+	env_reqip = os.Getenv("REQUEST_IP")
+	if env_port == "" {
+		env_port = "8080"
+	}
+	if env_reqip == "" {
+		fmt.Println("Set Outwards IP!")
+		return
+	}
 
 	socket := "socket" + string(os.PathSeparator) + "http-proxy.sock"
 	syscall.Unlink(socket)
@@ -311,7 +323,7 @@ func main() {
 	srv := &http.Server{
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 1 * time.Hour,
-		Addr:         ":8080",
+		Addr:         ":"+env_port,
 		Handler:      &requesthandler{},
 	}
 	if err != nil {
